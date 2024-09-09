@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Recommender</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header>
+            <h1>Recipe Recommender</h1>
+            <p>Get personalized recipe suggestions based on your ingredients</p>
+        </header>
+        <main>
+            <section class="input-section">
+                <h2>What ingredients do you have?</h2>
+                <input type="text" id="ingredients" placeholder="Enter ingredients (comma-separated)">
+                <select id="cuisine">
+                    <option value="Any">Any</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Asian">Asian</option>
+                    <option value="Mexican">Mexican</option>
+                    <option value="French">French</option>
+                    <option value="Indian">Indian</option>
+                </select>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="tr">Türkçe</option>
+                </select>
+                <button id="getRecipe">Get Recipe</button>
+                <button id="strictIngredients">Use Only These Ingredients</button>
+                <button id="suggestIngredients">Suggest Additional Ingredients</button>
+            </section>
+            <section id="recipeResult" class="recipe-card" style="display: none;">
+                <h3 id="recipeName"></h3>
+                <h4>Ingredients:</h4>
+                <ul id="recipeIngredients"></ul>
+                <h4>Instructions:</h4>
+                <ol id="recipeInstructions"></ol>
+            </section>
+        </main>
+        <footer>
+            <p>Follow us on social media:</p>
+            <a href="#" class="social-icons">📘</a>
+            <a href="#" class="social-icons">📸</a>
+            <a href="#" class="social-icons">🐦</a>
+            <p>© 2023 Recipe Recommender. All rights reserved.</p>
+        </footer>
+    </div>
+    <script src="/static/translations.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
