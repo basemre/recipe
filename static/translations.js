@@ -9,7 +9,14 @@ const translations = {
         ingredients: "Ingredients:",
         instructions: "Instructions:",
         socialMedia: "Follow us on social media:",
-        copyright: "© 2023 Recipe Recommender. All rights reserved."
+        copyright: "© 2023 Recipe Recommender. All rights reserved.",
+        placeholderIngredients: "Enter ingredients (comma-separated)",
+        cuisineAny: "Any",
+        cuisineItalian: "Italian",
+        cuisineAsian: "Asian",
+        cuisineMexican: "Mexican",
+        cuisineFrench: "French",
+        cuisineIndian: "Indian"
     },
     tr: {
         title: "Tarif Önerici",
@@ -21,6 +28,13 @@ const translations = {
         ingredients: "Malzemeler:",
         instructions: "Talimatlar:",
         socialMedia: "Bizi sosyal medyada takip edin:",
-        copyright: "© 2023 Tarif Önerici. Tüm hakları saklıdır."
+        copyright: "© 2023 Tarif Önerici. Tüm hakları saklıdır.",
+        placeholderIngredients: "Malzemeleri girin (virgülle ayırın)",
+        cuisineAny: "Herhangi",
+        cuisineItalian: "İtalyan",
+        cuisineAsian: "Asya",
+        cuisineMexican: "Meksika",
+        cuisineFrench: "Fransız",
+        cuisineIndian: "Hint"
     }
 };

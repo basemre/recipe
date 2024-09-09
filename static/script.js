@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestIngredientsButton = document.getElementById('suggestIngredients');
     const ingredientsInput = document.getElementById('ingredients');
     const cuisineSelect = document.getElementById('cuisine');
-    const languageSelect = document.getElementById('language');
+    const langButtons = document.querySelectorAll('.lang-btn');
     const recipeResult = document.getElementById('recipeResult');
     const recipeName = document.getElementById('recipeName');
     const recipeIngredients = document.getElementById('recipeIngredients');
@@ -12,21 +12,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentLanguage = 'en';
 
-    function updateLanguage() {
-        const lang = translations[currentLanguage];
-        document.querySelector('h1').textContent = lang.title;
-        document.querySelector('header p').textContent = lang.subtitle;
-        document.querySelector('.input-section h2').textContent = lang.ingredientsLabel;
-        getRecipeButton.textContent = lang.getRecipe;
-        strictIngredientsButton.textContent = lang.strictIngredients;
-        suggestIngredientsButton.textContent = lang.suggestIngredients;
-        document.querySelector('footer p:first-child').textContent = lang.socialMedia;
-        document.querySelector('footer p:last-child').textContent = lang.copyright;
+    function updateLanguage(lang) {
+        currentLanguage = lang;
+        langButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === lang);
+        });
+        const langData = translations[currentLanguage];
+        document.querySelector('h1').textContent = langData.title;
+        document.querySelector('header h2').textContent = langData.subtitle;
+        document.querySelector('.input-section h3').textContent = langData.ingredientsLabel;
+        getRecipeButton.textContent = langData.getRecipe;
+        strictIngredientsButton.textContent = langData.strictIngredients;
+        suggestIngredientsButton.textContent = langData.suggestIngredients;
+        document.querySelector('footer p:first-child').textContent = langData.socialMedia;
+        document.querySelector('footer p:last-child').textContent = langData.copyright;
+
+        // Update placeholder
+        ingredientsInput.placeholder = langData.placeholderIngredients;
+
+        // Update cuisine options
+        const cuisineOptions = cuisineSelect.querySelectorAll('option');
+        cuisineOptions.forEach(option => {
+            const translateKey = option.getAttribute('data-translate');
+            if (translateKey) {
+                option.textContent = langData[translateKey];
+            }
+        });
     }
 
-    languageSelect.addEventListener('change', (event) => {
-        currentLanguage = event.target.value;
-        updateLanguage();
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => updateLanguage(btn.dataset.lang));
     });
 
     function getRecipe(strict = false, suggest = false) {
