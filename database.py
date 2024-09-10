@@ -1,8 +1,11 @@
+"""This module defines the database models and provides database connection utilities."""
+
 import os
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from contextlib import contextmanager
 
 # Get the database URL from the environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -20,11 +23,14 @@ recipe_ingredient = Table('recipe_ingredient', Base.metadata,
 )
 
 class Ingredient(Base):
+    """Represents an ingredient in the database."""
     __tablename__ = 'ingredients'
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, index=True)
+    recipes = relationship("Recipe", secondary=recipe_ingredient, back_populates="ingredients")
 
 class Recipe(Base):
+    """Represents a recipe in the database."""
     __tablename__ = 'recipes'
     id = Column(Integer, primary_key=True)
     name = Column(String, index=True)
@@ -33,12 +39,15 @@ class Recipe(Base):
     ingredients = relationship("Ingredient", secondary=recipe_ingredient, back_populates="recipes")
 
 class UserSearch(Base):
+    """Represents a user search in the database."""
     __tablename__ = 'user_searches'
     id = Column(Integer, primary_key=True)
     search_query = Column(String)
     timestamp = Column(String)
+    suggested_recipes = relationship("SuggestedRecipe", back_populates="user_search")
 
 class SuggestedRecipe(Base):
+    """Represents a suggested recipe in the database."""
     __tablename__ = 'suggested_recipes'
     id = Column(Integer, primary_key=True)
     search_id = Column(Integer, ForeignKey('user_searches.id'))
@@ -47,16 +56,11 @@ class SuggestedRecipe(Base):
     recipe = relationship("Recipe")
 
 class User(Base):
+    """Represents a user in the database."""
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True)
-
-# Add back_populates to Ingredient class
-Ingredient.recipes = relationship("Recipe", secondary=recipe_ingredient, back_populates="ingredients")
-
-# Add back_populates to UserSearch class
-UserSearch.suggested_recipes = relationship("SuggestedRecipe", back_populates="user_search")
 
 # Create all tables in the database
 Base.metadata.create_all(engine)
@@ -64,9 +68,14 @@ Base.metadata.create_all(engine)
 # Create a session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Function to get a database session
 @contextmanager
 def get_db_session():
+    """
+    Provides a transactional scope around a series of operations.
+    
+    Yields:
+        Session: A SQLAlchemy database session.
+    """
     db = SessionLocal()
     try:
         yield db
