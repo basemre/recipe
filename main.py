@@ -1,3 +1,5 @@
+"""Main application module for the Recipe Recommender."""
+
 from flask import Flask, request, jsonify, send_from_directory
 from model import recommender
 from database import get_db_session
@@ -6,10 +8,12 @@ app = Flask(__name__, static_folder='static')
 
 @app.route('/')
 def index():
+    """Serve the main page of the application."""
     return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/api/recipe', methods=['POST'])
 def get_recipe():
+    """Handle recipe generation requests."""
     data = request.json
     ingredients = [ing.strip().lower() for ing in data['ingredients'].split(',')]
     cuisine = data['cuisine'] if data['cuisine'] != 'Any' else None
@@ -22,8 +26,7 @@ def get_recipe():
 
     if recipe:
         return jsonify(recipe)
-    else:
-        return jsonify({'error': 'Unable to generate a recipe'}), 400
+    return jsonify({'error': 'Unable to generate a recipe'}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

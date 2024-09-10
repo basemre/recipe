@@ -7,6 +7,8 @@ from database import get_db_session, Recipe, Ingredient, UserSearch, SuggestedRe
 from datetime import datetime
 
 class RecipeRecommender:
+    """Handles recipe recommendation using OpenAI's GPT-3.5 model."""
+
     def __init__(self):
         self.api_key = os.environ.get("OPENAI_API_KEY")
         if not self.api_key:
@@ -15,29 +17,54 @@ class RecipeRecommender:
         print(f"API Key: {self.api_key[:5]}...")
         print("OpenAI API key successfully set.")
 
-    def get_cached_recipe(self, db: Session, ingredients, cuisine=None, strict=False):
+    def get_cached_recipe(self, db: Session, ingredients: List[str], cuisine: Optional[str] = None, strict: bool = False) -> Optional[Recipe]:
+        """Retrieve a cached recipe from the database."""
         ingredients_set = set(ingredients)
         recipes = db.query(Recipe).filter(Recipe.cuisine == cuisine if cuisine else True).all()
-        
+
         for recipe in recipes:
             recipe_ingredients = set(ing.name.lower() for ing in recipe.ingredients)
-            if strict:
-                if ingredients_set == recipe_ingredients:
-                    return recipe
-            elif ingredients_set.issubset(recipe_ingredients):
+            if strict and ingredients_set == recipe_ingredients:
+                return recipe
+            if not strict and ingredients_set.issubset(recipe_ingredients):
                 return recipe
         return None
 
     @lru_cache(maxsize=100)
-    def generate_recipe(self, db: Session, ingredients_tuple, cuisine=None, strict=False, suggest=False, language='en'):
+    def generate_recipe(self, db: Session, ingredients_tuple: tuple, cuisine: Optional[str] = None,
+                        strict: bool = False, suggest: bool = False, language: str = 'en') -> Dict[str, any]:
+        """Generate a recipe based on given ingredients and parameters."""
         ingredients = list(ingredients_tuple)
         print(f"Generating recipe for ingredients: {', '.join(ingredients)}")
 
-        # Check for cached recipe
         cached_recipe = self.get_cached_recipe(db, ingredients, cuisine, strict)
         if cached_recipe:
             return self._recipe_to_dict(cached_recipe)
 
+        prompt, system_message = self._create_prompt(ingredients, cuisine, strict, suggest, language)
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+            )
+
+            recipe_text = response.choices[0].message.content.strip()
+            print(f"Generated recipe text:\n{recipe_text}")
+            parsed_recipe = self._parse_recipe(recipe_text, language)
+            print(f"Parsed recipe (language: {language}): {parsed_recipe}")
+            self._save_recipe_to_db(db, parsed_recipe, ingredients)
+            return parsed_recipe
+        except Exception as e:
+            print(f"OpenAI API error: {str(e)}")
+            return self._fallback_recipe(db, ingredients, cuisine)
+
+    def _create_prompt(self, ingredients: List[str], cuisine: Optional[str], strict: bool, suggest: bool, language: str) -> tuple:
+        """Create the prompt and system message for the OpenAI API."""
         if language == 'en':
             prompt = f"Create a recipe using the following ingredients: {', '.join(ingredients)}."
             if strict:
@@ -58,28 +85,13 @@ class RecipeRecommender:
             if cuisine and cuisine != "Any":
                 prompt += f" Mutfak türü {cuisine} olmalıdır."
             system_message = "Siz tarif oluşturan yardımcı bir asistansınız."
-        
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-            )
-            
-            recipe_text = response.choices[0].message.content.strip()
-            print(f"Generated recipe text:\n{recipe_text}")  # Debug print
-            parsed_recipe = self._parse_recipe(recipe_text, language)
-            print(f"Parsed recipe (language: {language}): {parsed_recipe}")  # Debug print
-            self._save_recipe_to_db(db, parsed_recipe, ingredients)
-            return parsed_recipe
-        except Exception as e:
-            print(f"OpenAI API error: {str(e)}")
-            return self._fallback_recipe(db, ingredients, cuisine)
+        else:
+            raise ValueError(f"Unsupported language: {language}")
 
-    def _parse_recipe(self, recipe_text, language):
+        return prompt, system_message
+
+    def _parse_recipe(self, recipe_text: str, language: str) -> Dict[str, any]:
+        """Parse the generated recipe text into a structured format."""
         lines = recipe_text.split('\n')
         recipe = {
             'name': '',
@@ -87,74 +99,73 @@ class RecipeRecommender:
             'instructions': [],
             'cuisine': ''
         }
-        
+
         section = ''
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            
+
             if not recipe['name']:
                 recipe['name'] = line
                 continue
-            
+
             if language == 'en':
                 if line.lower().startswith('ingredients:'):
                     section = 'ingredients'
                     continue
-                elif line.lower().startswith('instructions:'):
+                if line.lower().startswith('instructions:'):
                     section = 'instructions'
                     continue
-                elif line.lower().startswith('cuisine:'):
+                if line.lower().startswith('cuisine:'):
                     recipe['cuisine'] = line.split(':')[1].strip()
                     continue
             elif language == 'tr':
                 if line.lower().startswith('malzemeler:'):
                     section = 'ingredients'
                     continue
-                elif line.lower().startswith('talimatlar:') or line.lower().startswith('hazırlanışı:'):
+                if line.lower().startswith('talimatlar:') or line.lower().startswith('hazırlanışı:'):
                     section = 'instructions'
                     continue
-                elif line.lower().startswith('mutfak:'):
+                if line.lower().startswith('mutfak:'):
                     recipe['cuisine'] = line.split(':')[1].strip()
                     continue
-            
+
             if section == 'ingredients':
                 recipe['ingredients'].append(line.lstrip('- '))
             elif section == 'instructions':
                 recipe['instructions'].append(line.lstrip('1234567890. '))
-        
+
         return recipe
 
-    def _save_recipe_to_db(self, db: Session, recipe_dict, input_ingredients):
+    def _save_recipe_to_db(self, db: Session, recipe_dict: Dict[str, any], input_ingredients: List[str]):
+        """Save the generated recipe to the database."""
         new_recipe = Recipe(name=recipe_dict['name'], instructions='\n'.join(recipe_dict['instructions']), cuisine=recipe_dict['cuisine'])
         db.add(new_recipe)
-        
+
         for ing_name in recipe_dict['ingredients']:
             ingredient = db.query(Ingredient).filter(Ingredient.name == ing_name).first()
             if not ingredient:
                 ingredient = Ingredient(name=ing_name)
                 db.add(ingredient)
             new_recipe.ingredients.append(ingredient)
-        
+
         db.commit()
 
-    def _fallback_recipe(self, db: Session, ingredients, cuisine=None):
+    def _fallback_recipe(self, db: Session, ingredients: List[str], cuisine: Optional[str] = None) -> Optional[Dict[str, any]]:
+        """Provide a fallback recipe when generation fails."""
         recipes = db.query(Recipe).filter(Recipe.cuisine == cuisine if cuisine else True).all()
-        matching_recipes = []
-
-        for recipe in recipes:
-            recipe_ingredients = set(ing.name.lower() for ing in recipe.ingredients)
-            if any(ing.lower() in recipe_ingredients for ing in ingredients):
-                matching_recipes.append(recipe)
+        matching_recipes = [
+            recipe for recipe in recipes
+            if any(ing.lower() in set(ing.name.lower() for ing in recipe.ingredients) for ing in ingredients)
+        ]
 
         if matching_recipes:
-            chosen_recipe = random.choice(matching_recipes)
-            return self._recipe_to_dict(chosen_recipe)
-        else:
-            return None
+            return self._recipe_to_dict(random.choice(matching_recipes))
+        return None
 
-    def _recipe_to_dict(self, recipe):
+    def _recipe_to_dict(self, recipe: Recipe) -> Dict[str, any]:
+        """Convert a Recipe object to a dictionary."""
         return {
             'name': recipe.name,
             'ingredients': [ing.name for ing in recipe.ingredients],
@@ -162,12 +173,13 @@ class RecipeRecommender:
             'cuisine': recipe.cuisine
         }
 
-    def recommend_recipe(self, db: Session, ingredients, cuisine=None, strict=False, suggest=False, language='en'):
+    def recommend_recipe(self, db: Session, ingredients: List[str], cuisine: Optional[str] = None,
+                         strict: bool = False, suggest: bool = False, language: str = 'en') -> Optional[Dict[str, any]]:
+        """Recommend a recipe based on given ingredients and parameters."""
         ingredients_tuple = tuple(sorted(ingredients))
         recipe = self.generate_recipe(db, ingredients_tuple, cuisine, strict, suggest, language)
-        
+
         if recipe:
-            # Log user search and suggested recipe
             user_search = UserSearch(search_query=','.join(ingredients), timestamp=datetime.now().isoformat())
             db.add(user_search)
             db.commit()

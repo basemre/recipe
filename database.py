@@ -1,11 +1,12 @@
-"""This module defines the database models and provides database connection utilities."""
+"""Database models and connection utilities."""
 
 import os
 from contextlib import contextmanager
+from typing import Generator
 
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, Session
 
 # Get the database URL from the environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -17,7 +18,8 @@ engine = create_engine(DATABASE_URL)
 Base = declarative_base()
 
 # Define the association table for Recipe-Ingredient relationship
-recipe_ingredient = Table('recipe_ingredient', Base.metadata,
+recipe_ingredient = Table(
+    'recipe_ingredient', Base.metadata,
     Column('recipe_id', Integer, ForeignKey('recipes.id')),
     Column('ingredient_id', Integer, ForeignKey('ingredients.id'))
 )
@@ -29,6 +31,9 @@ class Ingredient(Base):
     name = Column(String, unique=True, index=True)
     recipes = relationship("Recipe", secondary=recipe_ingredient, back_populates="ingredients")
 
+    def __repr__(self) -> str:
+        return f"<Ingredient(name='{self.name}')>"
+
 class Recipe(Base):
     """Represents a recipe in the database."""
     __tablename__ = 'recipes'
@@ -38,6 +43,9 @@ class Recipe(Base):
     cuisine = Column(String, index=True)
     ingredients = relationship("Ingredient", secondary=recipe_ingredient, back_populates="recipes")
 
+    def __repr__(self) -> str:
+        return f"<Recipe(name='{self.name}', cuisine='{self.cuisine}')>"
+
 class UserSearch(Base):
     """Represents a user search in the database."""
     __tablename__ = 'user_searches'
@@ -45,6 +53,9 @@ class UserSearch(Base):
     search_query = Column(String)
     timestamp = Column(String)
     suggested_recipes = relationship("SuggestedRecipe", back_populates="user_search")
+
+    def __repr__(self) -> str:
+        return f"<UserSearch(query='{self.search_query}', timestamp='{self.timestamp}')>"
 
 class SuggestedRecipe(Base):
     """Represents a suggested recipe in the database."""
@@ -55,12 +66,18 @@ class SuggestedRecipe(Base):
     user_search = relationship("UserSearch", back_populates="suggested_recipes")
     recipe = relationship("Recipe")
 
+    def __repr__(self) -> str:
+        return f"<SuggestedRecipe(search_id={self.search_id}, recipe_id={self.recipe_id})>"
+
 class User(Base):
     """Represents a user in the database."""
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(120), unique=True, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<User(username='{self.username}', email='{self.email}')>"
 
 # Create all tables in the database
 Base.metadata.create_all(engine)
@@ -69,15 +86,14 @@ Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @contextmanager
-def get_db_session():
-    """
-    Provides a transactional scope around a series of operations.
-    
-    Yields:
-        Session: A SQLAlchemy database session.
-    """
-    db = SessionLocal()
+def get_db_session() -> Generator[Session, None, None]:
+    """Provide a transactional scope around a series of operations."""
+    session = SessionLocal()
     try:
-        yield db
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
-        db.close()
+        session.close()
