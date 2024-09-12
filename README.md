@@ -111,4 +111,14 @@ The application should now be running on `http://localhost:5000`.
 5. Expand language support to include more languages.
 6. Optimize the recipe generation algorithm for better performance.
 7. Implement unit and integration tests for the application.
+## Authentication
+
+This project now includes user authentication and authorization. Users can sign up, log in, and access protected routes based on their permissions.
+
+Key features:
+- User registration
+- User login
+- Protected routes
+- Role-based access control
+
 For any issues or feature requests, please open an issue on the GitHub repository.

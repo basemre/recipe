@@ -2,7 +2,7 @@
 
 from flask import Flask, request, jsonify, send_from_directory
 from model import recommender
-from database import get_db_session
+from database import get_db_session, Recipe, Ingredient, UserSearch, SuggestedRecipe
 
 app = Flask(__name__, static_folder='static')
 
@@ -29,4 +29,4 @@ def get_recipe():
     return jsonify({'error': 'Unable to generate a recipe'}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)

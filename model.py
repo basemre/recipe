@@ -1,3 +1,4 @@
+from typing import List, Optional, Dict, Any
 from openai import OpenAI
 import os
 import random
@@ -5,12 +6,15 @@ from functools import lru_cache
 from sqlalchemy.orm import Session
 from database import get_db_session, Recipe, Ingredient, UserSearch, SuggestedRecipe
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()  # This loads the variables from .env
 
 class RecipeRecommender:
     """Handles recipe recommendation using OpenAI's GPT-3.5 model."""
 
     def __init__(self):
-        self.api_key = os.environ.get("OPENAI_API_KEY")
+        self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key not found in environment variables")
         self.client = OpenAI(api_key=self.api_key)
@@ -174,7 +178,7 @@ class RecipeRecommender:
         }
 
     def recommend_recipe(self, db: Session, ingredients: List[str], cuisine: Optional[str] = None,
-                         strict: bool = False, suggest: bool = False, language: str = 'en') -> Optional[Dict[str, any]]:
+                         strict: bool = False, suggest: bool = False, language: str = 'en') -> Optional[Dict[str, Any]]:
         """Recommend a recipe based on given ingredients and parameters."""
         ingredients_tuple = tuple(sorted(ingredients))
         recipe = self.generate_recipe(db, ingredients_tuple, cuisine, strict, suggest, language)

@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeName = document.getElementById('recipeName');
     const recipeIngredients = document.getElementById('recipeIngredients');
     const recipeInstructions = document.getElementById('recipeInstructions');
+    const loginBtn = document.getElementById('loginBtn');
+    const signupBtn = document.getElementById('signupBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const mainContent = document.querySelector('main');
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const loginSubmit = document.getElementById('loginSubmit');
+    const signupSubmit = document.getElementById('signupSubmit');
+
+    updateLanguage();
 
     let currentLanguage = 'en';
 
@@ -76,5 +86,81 @@ document.addEventListener('DOMContentLoaded', () => {
     strictIngredientsButton.addEventListener('click', () => getRecipe(true, false));
     suggestIngredientsButton.addEventListener('click', () => getRecipe(false, true));
 
-    updateLanguage();
+    function showLoginForm() {
+        mainContent.style.display = 'none';
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+    }
+
+    function showSignupForm() {
+        mainContent.style.display = 'none';
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+    }
+
+    function showMainContent() {
+        mainContent.style.display = 'block';
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'none';
+    }
+
+    loginBtn.addEventListener('click', showLoginForm);
+    signupBtn.addEventListener('click', showSignupForm);
+
+    document.getElementById('goToSignup').addEventListener('click', (e) => {
+        e.preventDefault();
+        showSignupForm();
+    });
+
+    document.getElementById('goToLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginForm();
+    });
+
+    function updateAuthUI() {
+        if (auth.isAuthenticated()) {
+            loginBtn.style.display = 'none';
+            signupBtn.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+            showMainContent();
+        } else {
+            loginBtn.style.display = 'inline-block';
+            signupBtn.style.display = 'inline-block';
+            logoutBtn.style.display = 'none';
+            showLoginForm();
+        }
+    }
+
+    // Check auth status on page load
+    auth.checkAuthStatus().then(updateAuthUI);
+
+    loginSubmit.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        try {
+            await auth.login(username, password);
+            updateAuthUI();
+        } catch (error) {
+            alert('Login failed. Please try again.');
+        }
+    });
+
+    signupSubmit.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('signupUsername').value;
+        const password = document.getElementById('signupPassword').value;
+        try {
+            await signup(username, password);
+            alert('Signup successful. Please log in.');
+            showLoginForm();
+        } catch (error) {
+            alert('Signup failed. Please try again.');
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        auth.logout();
+        updateAuthUI();
+    });
 });

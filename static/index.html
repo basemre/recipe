@@ -11,6 +11,11 @@
     <nav class="navbar">
         <div class="container">
             <h1 class="logo">Recipe Recommender</h1>
+            <div class="nav-links">
+                <button id="loginBtn" class="btn">Login</button>
+                <button id="signupBtn" class="btn">Sign Up</button>
+                <button id="logoutBtn" class="btn" style="display: none;">Logout</button>
+            </div>
             <div class="language-select">
                 <button class="lang-btn" data-lang="en">🇬🇧</button>
                 <button class="lang-btn" data-lang="tr">🇹🇷</button>
@@ -72,7 +77,26 @@
         </div>
     </footer>
 
+    <form id="loginForm" style="display: none;">
+        <h2>Login</h2>
+        <input type="text" id="loginUsername" placeholder="Username" required>
+        <input type="password" id="loginPassword" placeholder="Password" required>
+        <button id="loginSubmit" type="submit">Login</button>
+        <p>Don't have an account? <a href="#" id="goToSignup">Sign up</a></p>
+    </form>
+
+    <form id="signupForm" style="display: none;">
+        <h2>Sign Up</h2>
+        <input type="text" id="signupUsername" placeholder="Username" required>
+        <input type="password" id="signupPassword" placeholder="Password" required>
+        <button id="signupSubmit" type="submit">Sign Up</button>
+        <p>Already have an account? <a href="#" id="goToLogin">Log in</a></p>
+    </form>
+
     <script src="/static/translations.js"></script>
+    <script src="/static/User.js"></script>
+    <script src="/static/auth.js"></script>
+    <script src="/static/signup.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
