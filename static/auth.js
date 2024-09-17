@@ -1,6 +1,6 @@
 class Auth {
     constructor() {
-        this.token = localStorage.getItem('token') || null;
+        this.token = null;
         this.user = null;
     }
 
@@ -12,6 +12,7 @@ class Auth {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ username, password }),
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -19,9 +20,7 @@ class Auth {
             }
 
             const data = await response.json();
-            this.token = data.token;
-            localStorage.setItem('token', this.token);
-            this.user = new User(data.user);
+            this.user = { id: data.user_id, username };
             return this.user;
         } catch (error) {
             console.error('Login error:', error);
@@ -29,43 +28,39 @@ class Auth {
         }
     }
 
-    logout() {
-        this.token = null;
-        this.user = null;
-        localStorage.removeItem('token');
+    async logout() {
+        try {
+            await fetch('/auth/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            this.user = null;
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     }
 
     isAuthenticated() {
-        return !!this.token;
-    }
-
-    getToken() {
-        return this.token;
+        return !!this.user;
     }
 
     async checkAuthStatus() {
-        if (!this.token) {
-            return false;
-        }
-
         try {
             const response = await fetch('/auth/user', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                },
+                credentials: 'include'
             });
 
             if (!response.ok) {
-                this.logout();
+                this.user = null;
                 return false;
             }
 
             const userData = await response.json();
-            this.user = new User(userData);
+            this.user = userData;
             return true;
         } catch (error) {
             console.error('Auth check error:', error);
-            this.logout();
+            this.user = null;
             return false;
         }
     }
